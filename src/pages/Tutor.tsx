@@ -240,8 +240,9 @@ export default function Tutor() {
     rec.onstart = () => setListening(true);
     rec.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       const transcript: string = e.results[0][0].transcript;
+      rec.stop();           // stop immediately — don't wait for onend
+      setListening(false);  // switch to processing state right away
       setInput(transcript);
-      // Auto-send after voice capture
       sendMessageText(transcript);
     };
     rec.onerror = () => setListening(false);
@@ -395,6 +396,8 @@ export default function Tutor() {
             className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full transition-colors ${
               listening
                 ? "bg-rose-500 text-white"
+                : isLoading
+                ? "bg-amber-400 text-white"
                 : "bg-gray-100 text-gray-500 hover:bg-gray-200 active:bg-gray-300"
             }`}
           >
@@ -409,6 +412,12 @@ export default function Tutor() {
                   />
                 ))}
               </span>
+            ) : isLoading ? (
+              // Spinner while waiting for API response
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
             ) : (
               <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 <path fillRule="evenodd" clipRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" />

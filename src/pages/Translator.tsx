@@ -252,6 +252,8 @@ export default function Translator() {
     rec.onstart = () => setListening(lang);
     rec.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       const transcript: string = e.results[0][0].transcript;
+      rec.stop();          // stop immediately — don't wait for onend
+      setListening(null);  // switch to processing state right away
       setText(transcript);
       translate(transcript);
     };
@@ -351,11 +353,13 @@ export default function Translator() {
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-medium transition-colors ${
                   listening === "en"
                     ? "bg-rose-50 text-rose-600"
+                    : translating
+                    ? "bg-amber-50 text-amber-600"
                     : "bg-white text-gray-600 hover:bg-gray-50 active:bg-gray-100"
                 }`}
               >
                 <MicIcon />
-                {listening === "en" ? "Listening…" : "Speak English"}
+                {listening === "en" ? "Listening…" : translating ? "Processing…" : "Speak English"}
               </button>
               <div className="w-px bg-gray-100" />
               <button
@@ -365,11 +369,13 @@ export default function Translator() {
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-medium transition-colors ${
                   listening === "hy"
                     ? "bg-rose-50 text-rose-600"
+                    : translating
+                    ? "bg-amber-50 text-amber-600"
                     : "bg-white text-gray-600 hover:bg-gray-50 active:bg-gray-100"
                 }`}
               >
                 <MicIcon />
-                {listening === "hy" ? "Listening…" : "Speak Armenian"}
+                {listening === "hy" ? "Listening…" : translating ? "Processing…" : "Speak Armenian"}
               </button>
             </div>
           )}
