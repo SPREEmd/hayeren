@@ -1,35 +1,15 @@
 type ClaudeRole = "user" | "assistant";
 export interface ChatMessage { role: ClaudeRole; content: string }
 
-const isLocal = window.location.hostname === "localhost";
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const API_URL = "https://api.anthropic.com/v1/messages";
 
-async function fetchClaude(body: object): Promise<Response> {
-  if (isLocal) {
-    const key = import.meta.env.VITE_ANTHROPIC_API_KEY as string;
-    return fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify(body),
-    });
-  }
-
-  // Production: route through Vercel serverless proxy
-  const { system, messages, max_tokens } = body as {
-    system: string;
-    messages: ChatMessage[];
-    max_tokens: number;
+function headers() {
+  return {
+    "Content-Type": "application/json",
+    "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY as string,
+    "anthropic-version": "2023-06-01",
+    "anthropic-dangerous-direct-browser-access": "true",
   };
-  return fetch("/api/claude", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system, messages, maxTokens: max_tokens }),
-  });
 }
 
 /** Multi-turn chat — pass full conversation history, last message must be "user". */
@@ -38,17 +18,19 @@ export async function callClaudeChat(
   messages: ChatMessage[],
   maxTokens = 600
 ): Promise<string> {
-  const res = await fetchClaude({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages,
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages,
+    }),
   });
 
   if (!res.ok) {
-    const errBody = await res.text();
-    console.error("[claude] HTTP", res.status, res.statusText);
-    console.error("[claude] error body:", errBody);
+    console.error("[claude] HTTP", res.status, await res.text());
     return "";
   }
   const data = await res.json();
@@ -60,17 +42,19 @@ export async function callClaude(
   userMessage: string,
   maxTokens = 500
 ): Promise<string> {
-  const res = await fetchClaude({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    }),
   });
 
   if (!res.ok) {
-    const errBody = await res.text();
-    console.error("[claude] HTTP", res.status, res.statusText);
-    console.error("[claude] error body:", errBody);
+    console.error("[claude] HTTP", res.status, await res.text());
     return "";
   }
   const data = await res.json();
@@ -96,7 +80,6 @@ Inch'pes ek' → inch-PES-ek
 Yntanik' → ən-tah-NIK
 Katù → kah-TOO`;
 
-// In-memory cache survives the browser session; avoids repeat API calls
 const pronunciationCache = new Map<string, string>();
 
 export async function getArmenianPronunciation(
@@ -106,7 +89,6 @@ export async function getArmenianPronunciation(
   if (pronunciationCache.has(armenian)) {
     return pronunciationCache.get(armenian)!;
   }
-
   try {
     const raw = await callClaude(
       PRONUNCIATION_SYSTEM,
